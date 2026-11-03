@@ -6,7 +6,7 @@ function editorialPage({isBayerwald,asset,home,bayer,cta,arrow,steps,showroom,en
     <div class="cinema-bottom wrap"><div class="film-caption"><span>PROSTOR PRO ŽIVOT</span><small>Ilustrační záběry interiéru</small></div><div class="film-controls"><button class="video-pause" aria-label="Pozastavit video" aria-pressed="false">Pozastavit</button><span id="film-status" class="sr-only" role="status"></span></div></div>
   </section>`;
   const caption=(left,right)=>`<div class="photo-caption"><span>${left}</span><span>${right}</span></div>`;
-  const scene=`<section class="space-story" id="inspirace"><div class="story-heading"><span class="folio">PROSTOR / 02</span><h2>Otevřete dům<br>zahradě.</h2><p>Někdy stačí otevřít. Velký posuvný portál propojí obývací pokoj s terasou a promění zahradu v další část domova.</p><a class="btn story-action" href="${bayer}#produkty">Prohlédnout řešení</a><button class="story-motion" type="button" aria-pressed="false">Pozastavit pohyb fotografie</button></div><figure><img loading="lazy" src="${asset('portal.jpg')}" alt="Dřevěný posuvný portál mezi obývacím pokojem a zahradou">${caption('HS PORTÁLY / BAYERWALD','Inspirace z prezentace výrobce')}</figure></section>`;
+  const scene=`<section class="space-story" id="inspirace"><div class="story-heading"><span class="folio">PROSTOR / 02</span><h2>Otevřete dům<br>zahradě.</h2><p>Někdy stačí otevřít. Velký posuvný portál propojí obývací pokoj s terasou a promění zahradu v další část domova.</p><a class="btn story-action" href="${bayer}#produkty">Prohlédnout řešení</a><button class="story-motion" type="button" aria-pressed="false">Pozastavit video</button><span class="sr-only story-status" role="status"></span></div><figure><img loading="lazy" src="${asset('garden-opening.jpg')}" alt="Posuvný portál propojující obývací pokoj se zahradou"><video class="garden-video" muted playsinline loop preload="none" poster="${asset('garden-opening.jpg')}" aria-label="Ilustrační video otevření domu do zahrady"></video>${caption('HS PORTÁLY','Ilustrační záběr')}</figure></section>`;
   const service=`<section class="partner-section" id="zazemi"><div class="wrap"><div class="partner-title"><span class="folio">ZÁZEMÍ / BACHL OKNA</span><h2>Od výběru oken<br>po jejich montáž.</h2></div><div class="service-list">${[['01','Pomůžeme vybrat.','Materiál, zasklení, barva, otevírání. Probereme, co potřebuje právě váš dům.'],['02','Přijedeme zaměřit.','Rozměry a stavební návaznosti ověříme přímo na místě.'],['03','Namontujeme. A zůstaneme.','Odborné osazení a kontakt pro následný servis. Jeden partner od výběru dál.']].map(p=>`<article><span>${p[0]}</span><h3>${p[1]}</h3><p>${p[2]}</p></article>`).join('')}</div></div></section>`;
   const world=(number,name,title,copy,image,color,target,product)=>`<article class="world-row" id="${name.toLowerCase()}"><span class="world-number">${number}</span><div class="world-copy"><span class="brandname ${color}">${name}</span><h3>${title}</h3><p>${copy}</p>${target?`<a href="${target}" class="textlink">Prohlédnout ${name} ${arrow}</a>`:`<button class="textlink plain-button" data-inquiry="${product}">Probrat možnosti ${arrow}</button>`}</div><div class="world-photo"><img loading="lazy" src="${asset(image)}" alt="${title.replace('<br>',' ')}"></div><span class="world-mark ${color}" aria-hidden="true"></span></article>`;
 
@@ -37,8 +37,17 @@ function initCinema({asset}) {
   update();play();
   const story=document.querySelector('.space-story');
   const motion=story.querySelector('.story-motion');
-  let storyPaused=reduced,storyVisible=false;
-  function storyState(){story.classList.toggle('motion-running',!storyPaused&&storyVisible&&!document.hidden);motion.setAttribute('aria-pressed',String(storyPaused));motion.textContent=storyPaused?'Spustit pohyb fotografie':'Pozastavit pohyb fotografie'}
+  const garden=story.querySelector('.garden-video');
+  let storyPaused=reduced||Boolean(navigator.connection?.saveData),storyVisible=false;
+  function storyLabel(){motion.setAttribute('aria-pressed',String(storyPaused));motion.textContent=storyPaused?'Přehrát video':'Pozastavit video'}
+  function storyState(){
+    storyLabel();
+    if(storyPaused||!storyVisible||document.hidden){garden.pause();return}
+    if(!garden.getAttribute('src'))garden.src=asset('garden-opening.mp4');
+    garden.play().catch(()=>{storyPaused=true;storyLabel()});
+  }
+  garden.addEventListener('playing',()=>garden.classList.add('ready'));
+  garden.addEventListener('error',()=>{garden.classList.remove('ready');storyPaused=true;storyLabel();story.querySelector('.story-status').textContent='Video není dostupné. Zobrazuje se fotografický náhled.'});
   motion.addEventListener('click',()=>{storyPaused=!storyPaused;storyState()});
   new IntersectionObserver(entries=>{storyVisible=entries[0].isIntersecting;storyState()},{threshold:.1}).observe(story);
   document.addEventListener('visibilitychange',storyState);storyState();
